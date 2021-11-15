@@ -16,6 +16,10 @@ from Data_clean_process import DATA_CLEAN
 
 pd.set_option('precision', 14)
 def LOCATE_CHECK(p,code,map_data):
+    if p == [-1.0,-1.0]:
+        return [-1,-1,-1]
+    if int(code) == 999999:
+        return [-1,-1,-1]
 
     p_ = Point(p[0],p[1])
     if True in list(map_data.contains(p_)):
@@ -85,7 +89,10 @@ Map_data = gpd.read_file(Map_path)
 
 # read wgs84 lat and long
 Locate_file_list = {'Locate_of_家庭成员出行地点表_84.csv':'DaoDaDiDianXiaoQuHao','Locate_of_家庭成员出行表_84.csv':'QiTaDiFangXiaoQuhao','Locate_of_家庭成员表_84.csv':'XiaoQuDaiMa'}
-Locate_name = 'Locate_of_家庭成员出行地点表_84.csv'
+#Locate_name = 'Locate_of_家庭成员出行地点表_84.csv'
+Locate_name = 'Locate_of_家庭成员表_84.csv'
+
+
 Locate_path = os.path.join('../data/',Locate_name)
 
 data = pd.read_csv(Locate_path, low_memory=False)
@@ -94,6 +101,10 @@ data = pd.read_csv(Locate_path, low_memory=False)
 # set map_code
 if Locate_name == 'Locate_of_家庭成员出行地点表_84.csv':
     Map_code = list(Cite[Locate_file_list[Locate_name]])
+elif Locate_name == 'Locate_of_家庭成员出行表_84.csv':
+    Map_code = list(Travel[Locate_file_list[Locate_name]])
+elif Locate_name == 'Locate_of_家庭成员表_84.csv':
+    Map_code = list(House_Member[Locate_file_list[Locate_name]])
 
 # set_save_path
 
@@ -112,12 +123,13 @@ points = list(map(lambda x,y:[x,y],lng,lat))
 output = []
 for i in tqdm.tqdm(range(len(data))):
 #for i in tqdm.tqdm(range(10)):
-    #print(i)
-    p = points[i]
-    code = Map_code[i]
-    aa = LOCATE_CHECK(p,code,Map_data)
-    aa.insert(0,i)
-    output.append(aa)
-
+    try:
+        p = points[i]
+        code = Map_code[i]
+        aa = LOCATE_CHECK(p,code,Map_data)
+        aa.insert(0,i)
+        output.append(aa)
+    except:
+        print(i)
 
 pd.DataFrame(output,columns= ['id','predict_code','real_code','distance']).to_csv(Save_path,index=None)
