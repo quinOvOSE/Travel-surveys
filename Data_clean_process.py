@@ -2,19 +2,21 @@
 # -*- coding:utf-8 -*-
 import pandas as pd
 
-def clean_address(i):
+def ADDRESS_CLEAN(i,district_dict):
     #1.删掉中文字符前的所有数字和英文字符。其中存在'2020年''旧地址''抽中\失'等字样，也去掉
     #2.删掉海淀区等字样，但是若出现“海淀”两字不删，可能有小区以区名为开头，所以不删。
+
     first_num_check = True if u'\u4e00' <= i[0] <= u'\u9fff' and i[0] not in ['年','抽','失','中','旧','地','址'] else False
 
     while(first_num_check==False):
         i = i[1:]
         first_num_check = True if u'\u4e00' <= i[0] <= u'\u9fff' and i[0] not in ['年','抽','失','中','旧','地','址'] else False
 
-    if i[:3] in list(quyu_dict.values()):
+    if i[:3] in list(district_dict.values()):
         i = i[3:]
-    if i[:4] in  list(quyu_dict.values()):
+    if i[:4] in  list(district_dict.values()):
         i = i[4:]
+
     return i
 
 
@@ -76,11 +78,32 @@ def DATA_CLEAN(Table_Cite,Table_Travel,Table_Vehicle,
 
 
     # Clean House_Member
-    print(Table_House_Member[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活']['XiaoQuDaiMa'])
+    #print(Table_House_Member[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活']['XiaoQuDaiMa'])
     Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活','XiaoQuDaiMa']=80303
-    print(Table_House_Member[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活']['XiaoQuDaiMa'])
-    return (Table_Cite,Table_Travel,Table_Vehicle,Table_License_Plate,Table_House_Member,Table_House)
+    #print(Table_House_Member[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活']['XiaoQuDaiMa'])
 
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='165中','XiangXiDizhi']='第一六五中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='94中','XiangXiDizhi']='第九十四中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='145中','XiangXiDizhi']='第一四五中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='22中','XiangXiDizhi']='第二十二中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='154中','XiangXiDizhi']='第一五四中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='161中','XiangXiDizhi']='第一六一中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='62中','XiangXiDizhi']='第六十二中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='63中','XiangXiDizhi']='第六十三中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='15中','XiangXiDizhi']='第十五中学'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='43中','XiangXiDizhi']='第四十三中学'
+
+
+
+
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='8-3-602','XiangXiDizhi']='良乡西潞园四里8号3单元602'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='82-3-501','XiangXiDizhi']='良乡西潞园四里82号3单元501'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='84-5-401','XiangXiDizhi']='良乡西潞园四里84号5单元401'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='798','XiangXiDizhi']='七九八艺术区'
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='5-1-601','XiangXiDizhi']='北京市朝阳区十里堡南里中路'
+
+
+    return (Table_Cite,Table_Travel,Table_Vehicle,Table_License_Plate,Table_House_Member,Table_House)
 
 
 
