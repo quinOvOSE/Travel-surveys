@@ -80,6 +80,7 @@ def DATA_CLEAN(Table_Cite,Table_Travel,Table_Vehicle,
     # Clean House_Member
     #print(Table_House_Member[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活']['XiaoQuDaiMa'])
     Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活','XiaoQuDaiMa']=80303
+    Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='阜成门外大街','XiaoQuDaiMa']=10601
     #print(Table_House_Member[Table_House_Member['XiangXiDizhi']=='石景山苹果园新生活']['XiaoQuDaiMa'])
 
     Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='165中','XiangXiDizhi']='第一六五中学'
@@ -93,6 +94,7 @@ def DATA_CLEAN(Table_Cite,Table_Travel,Table_Vehicle,
     Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='15中','XiangXiDizhi']='第十五中学'
     Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='43中','XiangXiDizhi']='第四十三中学'
 
+    Table_House_Member.loc[Table_House_Member['XiaoQuDaiMa']==107,'XiaoQuDaiMa']=50107
 
 
 

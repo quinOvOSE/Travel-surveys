@@ -38,7 +38,7 @@ def LOCATE_CHECK(p,code,map_data):
     else:
         return([-1,-1,-1])
 
-
+'''
 # 输入
 Table_Cite_path = '../data/家庭成员出行地点表.csv'
 Table_Travel_path = '../data/家庭成员出行表.csv'
@@ -133,3 +133,4 @@ for i in tqdm.tqdm(range(len(data))):
         print(i)
 
 pd.DataFrame(output,columns= ['id','predict_code','real_code','distance']).to_csv(Save_path,index=None)
+'''
