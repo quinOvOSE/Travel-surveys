@@ -17,5 +17,5 @@ def _TAZ_CHECK(df,static_data):
     return output
     
 Person['Rawdataofcheck']=Person[['WorkplaceOrSchoolLon','WorkplaceOrSchoolLat','WorkplaceOrSchoolTAZ']].apply_parallel(_TAZ_CHECK,num_processes=30,static_data = [Map_data])
-
+```
 
