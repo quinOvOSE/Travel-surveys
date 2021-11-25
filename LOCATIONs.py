@@ -4,44 +4,69 @@
 # 导入需要的库
 import pandas as pd
 import numpy as np
-from pprint import pprint
-import geopandas as gpd
-import tqdm
+from tqdm import tqdm
 import json
 import os
-from shapely.geometry import Point
-from geopy.geocoders import Baidu
-from geopy.distance import geodesic
 from Data_clean_process import DATA_CLEAN
+import datetime
 
+tqdm.pandas(desc='pandas bar')
 pd.set_option('precision', 14)
+def format_time(a):
+    lst = a.split('|')
+    return  datetime.datetime(int(lst[0]),
+                              int(lst[1]),
+                              int(lst[2]),
+                              int(lst[3]),
+                              int(lst[4]),
+                              int(lst[5]))
+
+def time_distance(a,b):
+    time_a = format_time(a)
+    time_b = format_time(b)
+    return (time_b-time_a).seconds
+
+def Search_on_DataFrame(x,df):
+    if type(x) == str:
+        familyid = int(x.split('_')[0])
+        memberid = int(x.split('_')[1])
+        temp = df[(df['JiaTingID']==familyid) & (df['ChengYuanID']==memberid)]
+        return temp
+    elif type(x) == int:
+        temp = df[df['JiaTingID']==x]
+        return temp
 
 def LocationID_PROCESS(x,Cite):
+    #print(x)
     familyid = int(x.split('_')[0])
     memberid = int(x.split('_')[1])
     temp = Cite[(Cite['JiaTingID']==familyid) & (Cite['ChengYuanID']==memberid)]
+    #print(len(temp))
+    return list(range(len(temp)+1))
 
-    return list(range(len(1,temp+1)))
-
-def LocationType_first(x,House_Member):
-    if x['LingChen3DianZaiNa']==1:
-        return 'Home'
-    elif x['LingChen3DianZaiNa']==3:
-        return 'Other'
+def LocationType_first(x,Likai_person,House_Member):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    if df_filter['LingChen3DianZaiNa'].__int__()==1:
+        return ['Home']
+    elif df_filter['LingChen3DianZaiNa'].__int__()==3:
+        return ['Other']
     else:
-        if x['ZaiGanShenMe'] == 3:
-            return 'Workplace'
-        elif x['ZaiGanShenMe'] == 5:
-            return 'School'
+        if df_filter['ZaiGanShenMe'].__int__() == 3:
+            return ['Workplace']
+        elif df_filter['ZaiGanShenMe'].__int__() == 5:
+            return ['School']
         else:
-            temp = House_Member[(House_Member['JiaTingID']==x['JiaTingID'])&(House_Member['ChengYuanID']==x['ChengYuanID'])]['RenYuanLeiBie']
+            print(x)
+            temp = House_Member[
+                (House_Member['JiaTingID']==df_filter['JiaTingID'].__int__())&(House_Member['ChengYuanID']==df_filter['ChengYuanID'].__int__())
+                 ]['RenYuanLeiBie']
             temp = list(temp)[0]
             if temp in [1.0,2.0]:
-                return 'Workplace'
+                return ['Workplace']
             elif temp in [3.0,4.0,5.0]:
-                return 'School'
+                return ['School']
             else:
-                return 'Other'
+                return ['Other']
 
 def _LocationType_others(x,House_Member):
     if x['JiXuHuanChengQingKuang'] == 2:
@@ -59,6 +84,7 @@ def _LocationType_others(x,House_Member):
             else:
                 temp = House_Member[(House_Member['JiaTingID']==x['JiaTingID'])&(House_Member['ChengYuanID']==x['ChengYuanID'])]['RenYuanLeiBie']
                 temp = list(temp)[0]
+                #print(temp)
                 if temp in [1.0,2.0]:
                     return 'Workplace'
                 elif temp in [3.0,4.0,5.0]:
@@ -67,25 +93,21 @@ def _LocationType_others(x,House_Member):
                     return 'Other'
         else:
             print('error occur in _LocationType_others')
-
-
 def LocationType_others(x,Cite,House_Member):
-    familyid = int(x.split('_')[0])
-    memberid = int(x.split('_')[1])
-    person_cite = Cite[(Cite['JiaTingID']==familyid)&(Cite['ChengYuanID']==memberid)]
-    #print(person_cite)
-    person_cite_ = pd.DataFrame.copy(person_cite,deep=True)
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+    person_cite_ = pd.DataFrame.copy(df_filter,deep=True)
     person_cite_['list'] = person_cite_.apply(_LocationType_others,args=(House_Member,),axis=1)
     return list(person_cite_['list'])
 
-def LocationAddress_first(x,House,House_Member):
-    if x['LingChen3DianZaiNa']==1:
-        return [list(House[House['JiaTingID']==x['JiaTingID']]['DiZhi'])[0]]
-    elif x['LingChen3DianZaiNa']==3:
-        return [list(x['QiTaDiFangDiZhi'])[0]]
-    elif x['LingChen3DianZaiNa']==2:
-        temp = House_Member[(House_Member['JiaTingID']==x['JiaTingID'])&(House_Member['ChengYuanID']==x['ChengYuanID'])]['XiangXiDizhi']
-        return [list(temp)[0]]
+def LocationAddress_first(x,Likai_person,House,House_Member):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    if df_filter['LingChen3DianZaiNa'].__int__()==1:
+        return [House[House['JiaTingID'] == df_filter['JiaTingID'].__int__()]['DiZhi'].any()]
+    elif df_filter['LingChen3DianZaiNa'].__int__()==3:
+        return [df_filter['QiTaDiFangDiZhi'].any()]
+    elif df_filter['LingChen3DianZaiNa'].__int__()==2:
+        temp = House_Member[(House_Member['JiaTingID']==df_filter['JiaTingID'])&(House_Member['ChengYuanID']==df_filter['ChengYuanID'])]['XiangXiDizhi']
+        return [temp.any()]
     else:
         print('error occur in LocationAddress_first')
 
@@ -105,22 +127,20 @@ def _LocationAddress_others(x,Cite,House_Member,House):
             print('error occor in _LocationAddress_others')
 
 def LocationAddress_others(x,Cite,House_Member,House):
-    familyid = int(x.split('_')[0])
-    memberid = int(x.split('_')[1])
-    person_cite = Cite[(Cite['JiaTingID']==familyid)&(Cite['ChengYuanID']==memberid)]
-    #print(person_cite)
-    person_cite_ = pd.DataFrame.copy(person_cite,deep=True)
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+    person_cite_ = pd.DataFrame.copy(df_filter,deep=True)
     person_cite_['list'] = person_cite_.apply(_LocationAddress_others,args=(Cite,House_Member,House,),axis=1)
     return list(person_cite_['list'])
 
-def LocationTAZ_first(x,House,House_Member):
-    if x['LingChen3DianZaiNa']==1:
-        return [list(House[House['JiaTingID']==x['JiaTingID']]['XiaoQuBianHao'])[0]]
-    elif x['LingChen3DianZaiNa']==2:
-        temp = House_Member[(House_Member['JiaTingID']==x['JiaTingID'])&(House_Member['ChengYuanID']==x['ChengYuanID'])]['XiaoQuDaiMa']
-        return [list(temp)[0]]
-    elif x['LingChen3DianZaiNa']==3:
-        return [x['QiTaDiFangXiaoQuhao']]
+def LocationTAZ_first(x,Likai_person,House,House_Member):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    if df_filter['LingChen3DianZaiNa'].__int__()==1:
+        return [House[House['JiaTingID']==df_filter['JiaTingID'].__int__()]['XiaoQuBianHao'].__int__()]
+    elif df_filter['LingChen3DianZaiNa'].__int__()==2:
+        temp = House_Member[(House_Member['JiaTingID']==df_filter['JiaTingID'])&(House_Member['ChengYuanID']==df_filter['ChengYuanID'])]['XiaoQuDaiMa']
+        return [temp.__int__()]
+    elif df_filter['LingChen3DianZaiNa'].__int__()==3:
+        return [df_filter['QiTaDiFangXiaoQuhao'].__int__()]
     else:
         print('error occur in LocationTAZ_first')
 
@@ -141,22 +161,21 @@ def _LocationTAZ_others(x,Cite,House_Member,House):
             print('error occor in _LocationAddress_others')
 
 def LocationTAZ_others(x,Cite,House_Member,House):
-    familyid = int(x.split('_')[0])
-    memberid = int(x.split('_')[1])
-    person_cite = Cite[(Cite['JiaTingID']==familyid)&(Cite['ChengYuanID']==memberid)]
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+
     #print(person_cite)
-    person_cite_ = pd.DataFrame.copy(person_cite,deep=True)
+    person_cite_ = pd.DataFrame.copy(df_filter,deep=True)
     person_cite_['list'] = person_cite_.apply(_LocationTAZ_others,args=(Cite,House_Member,House,),axis=1)
     return list(person_cite_['list'])
 
+
+
 def ActInLocation_first(x,Likai_person):
-    familyid = int(x.split('_')[0])
-    memberid = int(x.split('_')[1])
-    output = Likai_person[(Likai_person['JiaTingID']==familyid)&(Likai_person['ChengYuanID']==memberid)]
-    if pd.isnull(list(output['ZaiGanShenMe'])[0]):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    if pd.isnull(list(df_filter['ZaiGanShenMe'])[0]):
         return [1.0]
     else:
-        return [list(output['ZaiGanShenMe'])[0]]
+        return [list(df_filter['ZaiGanShenMe'])[0]]
 
 
 def _ActInLocation_others(x):
@@ -176,24 +195,101 @@ def _ActInLocation_others(x):
         else:
             return output
 
+
 def ActInLocation_others(x,Cite):
-    familyid = int(x.split('_')[0])
-    memberid = int(x.split('_')[1])
-    person_cite = Cite[(Cite['JiaTingID']==familyid)&(Cite['ChengYuanID']==memberid)]
-    person_cite_ = pd.DataFrame.copy(person_cite,deep=True)
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+    person_cite_ = pd.DataFrame.copy(df_filter,deep=True)
     person_cite_['list'] = person_cite_.apply(_ActInLocation_others,axis=1)
     return list(person_cite_['list'])
 
+
+def _ArriveLocTime_PROCESS(x):
+    if x['JiaoTongFangShi']==1:
+        return x['BuXingDaoDaSJ']
+    elif x['JiXuHuanChengQingKuang']==2:
+        return x['XiaCheDaoDaSJ']
+    else:
+        time = x['XiaCheDaoDaSJ']
+
+        dt = datetime.datetime(1990,1,1,time.hour,time.minute)
+        dt = dt+datetime.timedelta(minutes=x['BuHuanChengZouLuSJ'])
+        return dt
+
+def ArriveLocTime_PROCESS(x,Likai_person,Cite):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    #get year month and day
+    date = list(df_filter['ChuXinRQ'])[0]
+    year = str(date.year)
+    month =  str(date.month)
+    day =  str(date.day)
+    #get time
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+    times = df_filter.apply(_ArriveLocTime_PROCESS,axis=1)
+    output = []
+    for i in times:
+        output.append('|'.join([year,month,day,str(i.hour),str(i.minute),str(i.second)]))
+
+    return ['null']+output
+
+
+def LeaveLocTime_first(x,Likai_person,Cite):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    #get year month and day
+    date = list(df_filter['ChuXinRQ'])[0]
+    year = str(date.year)
+    month =  str(date.month)
+    day =  str(date.day)
+    #get time
+    time = df_filter['LiKaiSJ'].any()
+    output = '|'.join([year,month,day,str(time.hour),str(time.minute),str(time.second)])
+    return [output]
+
+def LeaveLocTime_others(x,Likai_person,Cite):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    #get year month and day
+    date = list(df_filter['ChuXinRQ'])[0]
+    year = str(date.year)
+    month =  str(date.month)
+    day =  str(date.day)
+    #get time
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+    times = df_filter.apply(lambda x:
+                            x['XiaCheDaoDaSJ'] if x['JiXuHuanChengQingKuang']==2 else x['LiKaiSJ'] if x['LiKaiQingKuang']!=2 else -1
+                            ,axis=1)
+    output = []
+    for i in times:
+        if i != -1:
+            output.append('|'.join([year,month,day,str(i.hour),str(i.minute),str(i.second)]))
+        else:
+            output.append(-1)
+    return output
+
+def StayDuration_PROCESS(x):
+    #print(x)
+    end = x['ArriveLocTime']
+    start = x['LeaveLocTime']
+
+    start = start[:-1]
+    end = end[1:]
+    return [-1]+list(map(lambda i,j:time_distance(i,j),start,end))+[-1]
+
+def ModeToAccessLoc_PROCESS(x,Cite):
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+    fangshi = list(df_filter['JiaoTongFangShi'])
+    return [-1]+fangshi
+
+
 # INPUT
-Table_Cite_path = '../data/家庭成员出行地点表.csv'
-Table_Travel_path = '../data/家庭成员出行表.csv'
+Table_Cite_path = '../data/家庭成员出行地点表.xlsx'
+Table_Travel_path = '../data/家庭成员出行表.xlsx'
 Table_Vehicle_path = '../data/家庭成员拥有机动车情况表.csv'
 Table_License_Plate_path = '../data/家庭成员汽车摇号表.csv'
 Table_House_Member_path = '../data/家庭成员表.csv'
 Table_House_path = '../data/家庭背景资料表.csv'
 
-Table_Cite = pd.read_csv(Table_Cite_path, low_memory=False)
-Table_Travel = pd.read_csv(Table_Travel_path, low_memory=False)
+Table_Cite = pd.read_excel(Table_Cite_path)
+Table_Travel = pd.read_excel(Table_Travel_path)
+
 Table_Vehicle = pd.read_csv(Table_Vehicle_path, low_memory=False)
 Table_License_Plate = pd.read_csv(Table_License_Plate_path, low_memory=False)
 Table_House_Member = pd.read_csv(Table_House_Member_path, low_memory=False)
@@ -214,14 +310,46 @@ Likai_person = list(Travel.groupby("Filter"))[1][1]
 
 Travel_person = pd.DataFrame()
 
+print('Build FamilyID ... ')
 Travel_person['FamilyID'] = Likai_person['JiaTingID']
+print('DONE')
 
-Travel_person['PersonID'] = Likai_person['JiaTingID'].apply(str)+'_'+Likai_person['ChengYuanID'].apply(str)
+print('Build PersonID ... ')
+Travel_person['PersonID'] = Likai_person['JiaTingID'].progress_apply(str)+'_'+Likai_person['ChengYuanID'].progress_apply(str)
+print('DONE')
 
-Travel_person['LocationID'] = Travel_person['PersonID'].apply(LocationID_PROCESS,args=(Cite,))
+print('Build LocationID ... ')
+#Travel_person['LocationID'] = Travel_person['PersonID'].progress_apply(LocationID_PROCESS,args=(Cite,))
+print('DONE')
 
-Travel_person['LocationType'] = Likai_person.apply(LocationType_first,args=(House_Member,),axis=1)+Travel_person['PersonID'].apply(LocationType_others,args=(Cite,House_Member))
-Travel_person['LocationAddress'] = Likai_person.apply(LocationAddress_first,args=(House,House_Member,),axis=1)+Travel_person['PersonID'].apply(LocationAddress_others,args=(Cite,House_Member,House,))
-Travel_person['LocationTAZ']  = Likai_person.apply(LocationTAZ_first,args=(House,House_Member,),axis=1)+Travel_person['PersonID'].apply(LocationTAZ_others,args=(Cite,House_Member,House,))
+print('Build LocationType ... ')
+#Travel_person['LocationType'] = Travel_person['PersonID'].progress_apply(LocationType_first,args=(Likai_person,House_Member,))+Travel_person['PersonID'].progress_apply(LocationType_others,args=(Cite,House_Member))
+print('DONE')
 
-Travel_person['ActInLocation'] = Travel_person['PersonID'].apply(ActInLocation_first,args=(Likai_person,))+Travel_person['PersonID'].apply(ActInLocation_others,args=(Cite,))
+print('Build LocationAddress... ')
+#Travel_person['LocationAddress'] =  Travel_person['PersonID'].progress_apply(LocationAddress_first,args=(Likai_person,House,House_Member,))+Travel_person['PersonID'].progress_apply(LocationAddress_others,args=(Cite,House_Member,House,))
+print('DONE')
+
+print('Build LocationTAZ ... ')
+#Travel_person['LocationTAZ'] = Travel_person['PersonID'].progress_apply(LocationTAZ_first,args=(Likai_person,House,House_Member,))+Travel_person['PersonID'].progress_apply(LocationTAZ_others,args=(Cite,House_Member,House,))
+print('DONE')
+
+print('Build ActInlocation ... ')
+#Travel_person['ActInLocation'] = Travel_person['PersonID'].progress_apply(ActInLocation_first,args=(Likai_person,))+Travel_person['PersonID'].progress_apply(ActInLocation_others,args=(Cite,))
+print('DONE')
+
+print('Build ArriveLoctime ... ')
+Travel_person['ArriveLocTime']  = Travel_person['PersonID'].progress_apply(ArriveLocTime_PROCESS,args=(Likai_person,Cite))
+print('DONE')
+
+print('Build Leaveloctime ... ')
+Travel_person['LeaveLocTime'] = Travel_person['PersonID'].progress_apply(LeaveLocTime_first,args=(Likai_person,Cite))+Travel_person['PersonID'].progress_apply(LeaveLocTime_others,args=(Likai_person,Cite))
+print('DONE')
+
+print('Build StayDuration ... ')
+Travel_person['StayDuration'] = Travel_person.progress_apply(StayDuration_PROCESS,axis=1)
+print('DONE')
+
+print('Build ModeToAccessLoc ... ')
+Travel_person['ModeToAccessLoc'] = Travel_person['PersonID'].progress_apply(ModeToAccessLoc_PROCESS,args=(Cite,))
+print('DONE')

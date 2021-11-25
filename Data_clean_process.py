@@ -105,6 +105,33 @@ def DATA_CLEAN(Table_Cite,Table_Travel,Table_Vehicle,
     Table_House_Member.loc[Table_House_Member['XiangXiDizhi']=='5-1-601','XiangXiDizhi']='北京市朝阳区十里堡南里中路'
 
 
+
+    #'121502001937_2'这位出行者的第一个活动地点和家距离1km，但他凌晨三点写的在单位，且没有写单位地址，45年人，把凌晨三点地点改为家。
+    Table_Travel.loc[(Table_Travel['JiaTingID']==121502001937)&(Table_Travel['ChengYuanID']==2),'LingChen3DianZaiNa']=1
+    #'161602000268_1'删掉这个人的出行行为，需要检查
+    temp = Table_Travel[(Table_Travel['JiaTingID']==161602000268)&(Table_Travel['ChengYuanID']==1)].index
+    Table_Travel = Table_Travel.drop(temp)
+    #'63504003331_2'这位出行者的第一个活动地点和家距离2km，但他凌晨三点写的在单位，且没有写单位地址，把凌晨三点地点改为家。
+    Table_Travel.loc[(Table_Travel['JiaTingID']==63504003331)&(Table_Travel['ChengYuanID']==2),'LingChen3DianZaiNa']=1
+
+    #'52502002589_3'删掉这个人的出行行为，需要检查
+    temp = Table_Travel[(Table_Travel['JiaTingID']==52502002589)&(Table_Travel['ChengYuanID']==3)].index
+    Table_Travel = Table_Travel.drop(temp)
+
+    #'80601001405_1'删掉这个人的出行行为，需要检查
+    temp = Table_Travel[(Table_Travel['JiaTingID']==80601001405)&(Table_Travel['ChengYuanID']==1)].index
+    Table_Travel = Table_Travel.drop(temp)
+
+    #有一些到达单位和学校的人，没有出行目的，依据其的活动进行赋值
+    Table_Cite.loc[(Table_Cite['JiaTingID']==171904000397)&(Table_Cite['ChengYuanID']==1)&(Table_Cite['DiDianID']==4),'ZaiNaGanShenMe'] = 3
+    Table_Cite.loc[(Table_Cite['JiaTingID']==171904000413)&(Table_Cite['ChengYuanID']==4)&(Table_Cite['DiDianID']==4),'ZaiNaGanShenMe'] = 5
+    Table_Cite.loc[(Table_Cite['JiaTingID']==131100001481)&(Table_Cite['ChengYuanID']==2)&(Table_Cite['DiDianID']==4),'ZaiNaGanShenMe'] = 3
+    Table_Cite.loc[(Table_Cite['JiaTingID']==91000001925)&(Table_Cite['ChengYuanID']==1)&(Table_Cite['DiDianID']==4),'ZaiNaGanShenMe'] = 3
+    Table_Cite.loc[(Table_Cite['JiaTingID']==50303001465)&(Table_Cite['ChengYuanID']==3)&(Table_Cite['DiDianID']==4),'ZaiNaGanShenMe'] = 5
+    Table_Cite.loc[(Table_Cite['JiaTingID']==80301001014)&(Table_Cite['ChengYuanID']==3)&(Table_Cite['DiDianID']==4),'ZaiNaGanShenMe'] = 3
+    Table_Cite.loc[(Table_Cite['JiaTingID']==111109000846)&(Table_Cite['ChengYuanID']==3)&(Table_Cite['DiDianID']==4),'ZaiNaGanShenMe'] = 3
+
+
     return (Table_Cite,Table_Travel,Table_Vehicle,Table_License_Plate,Table_House_Member,Table_House)
 
 
