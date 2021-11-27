@@ -14,7 +14,8 @@ def GEOCODERS(address):
             location = -99999
             return location
         else:
-            location = geolocator.geocode(address)
+            tt = '北京市'+address
+            location = geolocator.geocode(tt)
             return location.raw
     except:
         print('ERROR in sample named {}'.format(address))

@@ -7,11 +7,12 @@ import numpy as np
 from tqdm import tqdm
 import json
 import os
-from Data_clean_process import DATA_CLEAN
+from Data_clean_process import DATA_CLEAN,ADDRESS_CLEAN
 import datetime
 
 tqdm.pandas(desc='pandas bar')
 pd.set_option('precision', 14)
+
 def format_time(a):
     lst = a.split('|')
     return  datetime.datetime(int(lst[0]),
@@ -56,7 +57,6 @@ def LocationType_first(x,Likai_person,House_Member):
         elif df_filter['ZaiGanShenMe'].__int__() == 5:
             return ['School']
         else:
-            print(x)
             temp = House_Member[
                 (House_Member['JiaTingID']==df_filter['JiaTingID'].__int__())&(House_Member['ChengYuanID']==df_filter['ChengYuanID'].__int__())
                  ]['RenYuanLeiBie']
@@ -93,36 +93,93 @@ def _LocationType_others(x,House_Member):
                     return 'Other'
         else:
             print('error occur in _LocationType_others')
+
 def LocationType_others(x,Cite,House_Member):
     df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
     person_cite_ = pd.DataFrame.copy(df_filter,deep=True)
     person_cite_['list'] = person_cite_.apply(_LocationType_others,args=(House_Member,),axis=1)
     return list(person_cite_['list'])
 
+
 def LocationAddress_first(x,Likai_person,House,House_Member):
     df_filter = Search_on_DataFrame(x,Likai_person)
     if df_filter['LingChen3DianZaiNa'].__int__()==1:
-        return [House[House['JiaTingID'] == df_filter['JiaTingID'].__int__()]['DiZhi'].any()]
+        temp_name = ADDRESS_CLEAN(House[House['JiaTingID'] == df_filter['JiaTingID'].__int__()]['DiZhi'].any(),
+                            district_dict)
+        code_ = House[House['JiaTingID'] == df_filter['JiaTingID'].__int__()]['XiaoQuBianHao'].__int__()
+        if len(str(int(code_))) == 5:
+            dis = district_dict[int(str(int(code_))[0])]
+
+        elif len(str(int(code_))) == 6 and int(code_)!=999999 and int(code_)!=270000:
+            dis = district_dict[int(str(int(code_))[:2])]
+        else:
+            dis = '京外'
+        return [dis+temp_name]
     elif df_filter['LingChen3DianZaiNa'].__int__()==3:
-        return [df_filter['QiTaDiFangDiZhi'].any()]
+        temp_name = ADDRESS_CLEAN(df_filter['QiTaDiFangDiZhi'].any(),district_dict)
+        code_ = House[House['JiaTingID'] == df_filter['JiaTingID'].__int__()]['XiaoQuBianHao'].__int__()
+        if len(str(int(code_))) == 5:
+            dis = district_dict[int(str(int(code_))[0])]
+
+        elif len(str(int(code_))) == 6 and int(code_)!=999999 and int(code_)!=270000:
+            dis = district_dict[int(str(int(code_))[:2])]
+        else:
+            dis = '京外'
+        return [dis+temp_name]
+
     elif df_filter['LingChen3DianZaiNa'].__int__()==2:
-        temp = House_Member[(House_Member['JiaTingID']==df_filter['JiaTingID'])&(House_Member['ChengYuanID']==df_filter['ChengYuanID'])]['XiangXiDizhi']
-        return [temp.any()]
+        temp_name = ADDRESS_CLEAN(House_Member[(House_Member['JiaTingID']==df_filter['JiaTingID'].__int__())&(House_Member['ChengYuanID']==df_filter['ChengYuanID'].__int__())]['XiangXiDizhi'].any()
+,district_dict)
+        code_ = House[House['JiaTingID'] == df_filter['JiaTingID'].__int__()]['XiaoQuBianHao'].__int__()
+        if len(str(int(code_))) == 5:
+            dis = district_dict[int(str(int(code_))[0])]
+
+        elif len(str(int(code_))) == 6 and int(code_)!=999999 and int(code_)!=270000:
+            dis = district_dict[int(str(int(code_))[:2])]
+        else:
+            dis = '京外'
+        return [dis+temp_name]
     else:
         print('error occur in LocationAddress_first')
 
 def _LocationAddress_others(x,Cite,House_Member,House):
     if x['JiXuHuanChengQingKuang'] == 2:
-        return list(x['HuanChengDiDian'])[0]
+        return '北京市'+x['HuanChengDiDian']
     else:
         if x['DaoDaDiDian']==1:
             home = list(House[House['JiaTingID']==x['JiaTingID']]['DiZhi'])[0]
-            return home
+            temp_name = ADDRESS_CLEAN(home,district_dict)
+            code_ = House[House['JiaTingID'] == x['JiaTingID'].__int__()]['XiaoQuBianHao'].__int__()
+            if len(str(int(code_))) == 5:
+                dis = district_dict[int(str(int(code_))[0])]
+            elif len(str(int(code_))) == 6 and int(code_)!=999999 and int(code_)!=270000:
+                dis = district_dict[int(str(int(code_))[:2])]
+            else:
+                dis = '京外'
+            return dis+temp_name
         elif x['DaoDaDiDian'] ==2:
             work = House_Member[(House_Member['JiaTingID']==x['JiaTingID'])&(House_Member['ChengYuanID']==x['ChengYuanID'])]['XiangXiDizhi']
-            return list(work)[0]
+            temp_name = ADDRESS_CLEAN(list(work)[0],district_dict)
+            code_ = House_Member[(House_Member['JiaTingID']==x['JiaTingID'])&(House_Member['ChengYuanID']==x['ChengYuanID'])]['XiaoQuDaiMa'].__int__()
+            if len(str(int(code_))) == 5:
+                dis = district_dict[int(str(int(code_))[0])]
+            elif len(str(int(code_))) == 6 and int(code_)!=999999 and int(code_)!=270000:
+                dis = district_dict[int(str(int(code_))[:2])]
+            else:
+                dis = '京外'
+            return dis+temp_name
+
         elif x['DaoDaDiDian'] ==3:
-            return x['DaoDaDiDianQT']
+            temp_name = ADDRESS_CLEAN(x['DaoDaDiDianQT'],district_dict)
+            code_ = Cite[(Cite['DiDianID']==x['DiDianID'])&(Cite['JiaTingID']==x['JiaTingID'])&(Cite['ChengYuanID']==x['ChengYuanID'])]['DaoDaDiDianXiaoQuHao']
+            if len(str(int(code_))) == 5:
+                dis = district_dict[int(str(int(code_))[0])]
+            elif len(str(int(code_))) == 6 and int(code_)!=999999 and int(code_)!=270000:
+                dis = district_dict[int(str(int(code_))[:2])]
+            else:
+                dis = '京外'
+
+            return dis+temp_name
         else:
             print('error occor in _LocationAddress_others')
 
@@ -132,12 +189,14 @@ def LocationAddress_others(x,Cite,House_Member,House):
     person_cite_['list'] = person_cite_.apply(_LocationAddress_others,args=(Cite,House_Member,House,),axis=1)
     return list(person_cite_['list'])
 
+
+
 def LocationTAZ_first(x,Likai_person,House,House_Member):
     df_filter = Search_on_DataFrame(x,Likai_person)
     if df_filter['LingChen3DianZaiNa'].__int__()==1:
         return [House[House['JiaTingID']==df_filter['JiaTingID'].__int__()]['XiaoQuBianHao'].__int__()]
     elif df_filter['LingChen3DianZaiNa'].__int__()==2:
-        temp = House_Member[(House_Member['JiaTingID']==df_filter['JiaTingID'])&(House_Member['ChengYuanID']==df_filter['ChengYuanID'])]['XiaoQuDaiMa']
+        temp = House_Member[(House_Member['JiaTingID']==df_filter['JiaTingID'].__int__())&(House_Member['ChengYuanID']==df_filter['ChengYuanID'].__int__())]['XiaoQuDaiMa']
         return [temp.__int__()]
     elif df_filter['LingChen3DianZaiNa'].__int__()==3:
         return [df_filter['QiTaDiFangXiaoQuhao'].__int__()]
@@ -184,6 +243,8 @@ def _ActInLocation_others(x):
             return 15
         elif x['DaoDaDiDian']==1:
             return 16
+        elif x['DaoDaDiDian']==2:
+            return 3
         else:
             print('error occur in _ActInLocation_others')
     else:
@@ -264,19 +325,98 @@ def LeaveLocTime_others(x,Likai_person,Cite):
             output.append(-1)
     return output
 
-def StayDuration_PROCESS(x):
-    #print(x)
+
+def TravelDurToAccessLoc_PROCESS(x):
+
     end = x['ArriveLocTime']
     start = x['LeaveLocTime']
 
     start = start[:-1]
     end = end[1:]
-    return [-1]+list(map(lambda i,j:time_distance(i,j),start,end))+[-1]
+    return [-1]+list(map(lambda i,j:time_distance(i,j),start,end))
+
 
 def ModeToAccessLoc_PROCESS(x,Cite):
     df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
     fangshi = list(df_filter['JiaoTongFangShi'])
     return [-1]+fangshi
+
+
+def StayDuration_PROCESS(x):
+    start = x['ArriveLocTime']
+    end = x['LeaveLocTime']
+
+    start = start[1:-1]
+    end = end[1:-1]
+    return [-1]+list(map(lambda i,j:time_distance(i,j),start,end))+[-1]
+
+def DayOfWeek_PROCESS(x,Likai_person):
+    df_filter = Search_on_DataFrame(x,Likai_person)
+    return df_filter['ChuXinXQ'].__int__()
+
+def DriverOrNot_PROCESS(x,Cite):
+    df_filter = Search_on_DataFrame(x,Cite).sort_values(by='DiDianID')
+    temp = list(df_filter['ChenKeHuoJiaShiYuan'])[0]
+    if pd.isnull(temp):
+        return -1
+    elif temp == 1:
+        return 0
+    elif temp == 2:
+        return 1
+    else:
+        print('error in DriverOrNot_PROCESS')
+
+def FamilyMemInVehicle_PROCESS(x,Cite):
+    if x['DriverOrNot'] == -1:
+        return 'null'
+    elif x['DriverOrNot'] == 0:
+        return 'null'
+    else:
+        name = x['PersonID']
+        df_filter = Search_on_DataFrame(name,Cite).sort_values(by='DiDianID')
+        temp = list(df_filter['TongChengJiaRenID'])[0]
+        if pd.isnull(temp):
+            return 'null'
+        elif temp<10:
+            return str(temp)
+        else:
+            return '-'.join(list(str(int(temp))))
+
+def PersonNumInVehicle_PROCESS(x,Cite):
+    if x['DriverOrNot'] == -1:
+        return 'null'
+    elif x['DriverOrNot'] == 0:
+        return 'null'
+    else:
+        name = x['PersonID']
+        df_filter = Search_on_DataFrame(name,Cite).sort_values(by='DiDianID')
+        temp = list(df_filter['CheShangZongRenShu'])[0]
+        if temp<10:
+            return temp
+        else:
+            return len(str(x['FamilyMemInVehicle']).split('-'))+1
+
+
+def LocationLat_PROCESS(x,Lon_Lat):
+    name = int(x['PersonID'].split('_')[0]+x['PersonID'].split('_')[1])
+    df_filter = Lon_Lat[Lon_Lat['PersonID']==name]
+    temp = df_filter['LocationDecode'].any()
+    output = []
+    for i in temp:
+        if type(i) == dict:
+            output.append(i['location']['lat'])
+    return(output)
+
+def LocationLon_PROCESS(x,Lon_Lat):
+    name = int(x['PersonID'].split('_')[0]+x['PersonID'].split('_')[1])
+    df_filter = Lon_Lat[Lon_Lat['PersonID']==name]
+    temp = df_filter['LocationDecode'].any()
+    output = []
+    for i in temp:
+        if type(i) == dict:
+            output.append(i['location']['lng'])
+    return(output)
+
 
 
 # INPUT
@@ -306,7 +446,14 @@ Cite,Travel,Vehicle,License_Plate,House_Member,House = DATA_CLEAN(Table_Cite,Tab
 #print(Travel[:10])
 # filter person who generate a travel
 Travel['Filter'] = Travel.apply(lambda x:1 if x['LiKaiQingKuang']==1 and (pd.isnull(x['QiTaDiFangXiaoQuhao']) or (x['QiTaDiFangXiaoQuhao'] >=10000 and x['QiTaDiFangXiaoQuhao'] <=200000)) else 0,axis=1)
+
+
+
+
 Likai_person = list(Travel.groupby("Filter"))[1][1]
+
+
+Likai_person = Likai_person[:2000]
 
 Travel_person = pd.DataFrame()
 
@@ -319,23 +466,23 @@ Travel_person['PersonID'] = Likai_person['JiaTingID'].progress_apply(str)+'_'+Li
 print('DONE')
 
 print('Build LocationID ... ')
-#Travel_person['LocationID'] = Travel_person['PersonID'].progress_apply(LocationID_PROCESS,args=(Cite,))
+Travel_person['LocationID'] = Travel_person['PersonID'].progress_apply(LocationID_PROCESS,args=(Cite,))
 print('DONE')
 
 print('Build LocationType ... ')
-#Travel_person['LocationType'] = Travel_person['PersonID'].progress_apply(LocationType_first,args=(Likai_person,House_Member,))+Travel_person['PersonID'].progress_apply(LocationType_others,args=(Cite,House_Member))
+Travel_person['LocationType'] = Travel_person['PersonID'].progress_apply(LocationType_first,args=(Likai_person,House_Member,))+Travel_person['PersonID'].progress_apply(LocationType_others,args=(Cite,House_Member))
 print('DONE')
 
 print('Build LocationAddress... ')
-#Travel_person['LocationAddress'] =  Travel_person['PersonID'].progress_apply(LocationAddress_first,args=(Likai_person,House,House_Member,))+Travel_person['PersonID'].progress_apply(LocationAddress_others,args=(Cite,House_Member,House,))
+Travel_person['LocationAddress'] =  Travel_person['PersonID'].progress_apply(LocationAddress_first,args=(Likai_person,House,House_Member,))+Travel_person['PersonID'].progress_apply(LocationAddress_others,args=(Cite,House_Member,House,))
 print('DONE')
 
 print('Build LocationTAZ ... ')
-#Travel_person['LocationTAZ'] = Travel_person['PersonID'].progress_apply(LocationTAZ_first,args=(Likai_person,House,House_Member,))+Travel_person['PersonID'].progress_apply(LocationTAZ_others,args=(Cite,House_Member,House,))
+Travel_person['LocationTAZ'] = Travel_person['PersonID'].progress_apply(LocationTAZ_first,args=(Likai_person,House,House_Member,))+Travel_person['PersonID'].progress_apply(LocationTAZ_others,args=(Cite,House_Member,House,))
 print('DONE')
 
 print('Build ActInlocation ... ')
-#Travel_person['ActInLocation'] = Travel_person['PersonID'].progress_apply(ActInLocation_first,args=(Likai_person,))+Travel_person['PersonID'].progress_apply(ActInLocation_others,args=(Cite,))
+Travel_person['ActInLocation'] = Travel_person['PersonID'].progress_apply(ActInLocation_first,args=(Likai_person,))+Travel_person['PersonID'].progress_apply(ActInLocation_others,args=(Cite,))
 print('DONE')
 
 print('Build ArriveLoctime ... ')
@@ -353,3 +500,29 @@ print('DONE')
 print('Build ModeToAccessLoc ... ')
 Travel_person['ModeToAccessLoc'] = Travel_person['PersonID'].progress_apply(ModeToAccessLoc_PROCESS,args=(Cite,))
 print('DONE')
+
+print('Build TravelDurToAccessLoc ... ')
+Travel_person['TravelDurToAccessLoc'] = Travel_person.progress_apply(TravelDurToAccessLoc_PROCESS,axis=1)
+print('DONE')
+
+print('Build DayofWeek ... ')
+Travel_person['DayOfWeek'] = Travel_person['PersonID'].progress_apply(DayOfWeek_PROCESS,args=(Likai_person,))
+print('DONE')
+
+print('Build DriverOrNot ... ')
+Travel_person['DriverOrNot'] = Travel_person['PersonID'].progress_apply(DriverOrNot_PROCESS,args=(Cite,))
+print('DONE')
+
+print('Build FamilyMeminVehicle ... ')
+Travel_person['FamilyMemInVehicle'] = Travel_person.progress_apply(FamilyMemInVehicle_PROCESS,args=(Cite,),axis=1)
+print('DONE')
+
+print('Build PersonNumInVehicle ... ')
+Travel_person['PersonNumInVehicle'] = Travel_person.progress_apply(PersonNumInVehicle_PROCESS,args=(Cite,),axis=1)
+print('DONE')
+
+#Lon_Lat = pd.read_json('../documents/Travel_locates_by_lon_lat.json')
+#Travel_person['LocationLat'] = Travel_person.progress_apply(LocationLat_PROCESS,args=(Lon_Lat,),axis=1)
+#Travel_person['LocationLon'] = Travel_person.progress_apply(LocationLon_PROCESS,args=(Lon_Lat,),axis=1)
+
+#Travel_person.to_json('../documents/Locations.json')
